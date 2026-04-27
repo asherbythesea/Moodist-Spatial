@@ -1,17 +1,14 @@
 <script lang="ts">
   import { remote } from '@/lib/stores/remote.svelte';
-  import { Settings, Monitor, Laptop, Smartphone } from 'lucide-svelte';
+  import { Settings, Monitor, Laptop, Smartphone, Check } from 'lucide-svelte';
   
   let newName = $state(remote.myName);
+  let isEditing = $state(false);
   
-  // Keep newName in sync if remote.myName changes from another source
-  $effect(() => {
-    newName = remote.myName;
-  });
-
-  function handleUpdate() {
+  function handleSave() {
     if (newName.trim()) {
       remote.setName(newName.trim());
+      isEditing = false;
     }
   }
 
@@ -25,11 +22,11 @@
 <div class="device-settings">
   <div class="section-header">
     <Settings size={18} />
-    <h3>Remote Control</h3>
+    <h3>Device Settings</h3>
   </div>
 
   <p class="description">
-    Identify this device when connecting from other computers.
+    Give this device a friendly name so you can recognize it from other clients.
   </p>
 
   <div class="device-card">
@@ -40,16 +37,25 @@
        {/if}
     </div>
     <div class="device-info">
-      <label for="device-name">Device Name</label>
-      <input 
-        id="device-name"
-        type="text" 
-        bind:value={newName} 
-        onblur={handleUpdate}
-        onkeydown={(e) => e.key === 'Enter' && handleUpdate()}
-        placeholder="e.g. Living Room Speakers"
-      />
-      <span class="device-id">ID: {remote.myId}</span>
+      <div class="input-group">
+        <label for="device-name">Device Name</label>
+        <div class="input-wrapper">
+          <input 
+            id="device-name"
+            type="text" 
+            bind:value={newName}
+            onfocus={() => isEditing = true}
+            onkeydown={(e) => e.key === 'Enter' && handleSave()}
+            placeholder="e.g. Living Room Speakers"
+          />
+          {#if isEditing}
+            <button class="save-btn" onclick={handleSave} in:fade>
+              <Check size={16} />
+            </button>
+          {/if}
+        </div>
+      </div>
+      <span class="device-id">Device ID: {remote.myId}</span>
     </div>
   </div>
 
@@ -109,7 +115,19 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
     gap: 0.25rem;
+  }
+
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
   }
 
   .device-info label {
@@ -137,11 +155,33 @@
     border-color: var(--color-accent);
   }
 
+  .save-btn {
+    position: absolute;
+    right: 0;
+    bottom: 4px;
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .save-btn:hover {
+    transform: scale(1.1);
+    background: var(--color-accent-2);
+  }
+
   .device-id {
     font-size: 0.7rem;
     font-family: monospace;
     color: var(--color-text-muted);
-    margin-top: 0.25rem;
+    opacity: 0.6;
   }
 
   .status-info {

@@ -2,7 +2,7 @@ import { load, save } from '@/lib/utils/storage';
 import type { UIState } from '@/lib/types';
 
 const defaults: UIState = {
-  theme: 'system',
+  theme: 'dark',
   notepad: '',
   sidebarOpen: false,
   activeCategory: null,
@@ -14,16 +14,10 @@ class UIStore {
   activeToolTab = $state<'presets' | 'pomodoro' | 'sleep' | 'notepad' | 'device'>('presets');
   shareToastVisible = $state(false);
 
-  get theme() { return this.state.theme; }
+  get theme() { return 'dark'; }
   get notepad() { return this.state.notepad; }
   get sidebarOpen() { return this.state.sidebarOpen; }
   get activeCategory() { return this.state.activeCategory; }
-
-  setTheme(theme: UIState['theme']): void {
-    this.state = { ...this.state, theme };
-    this.applyTheme();
-    this.persist();
-  }
 
   setNotepad(text: string): void {
     this.state = { ...this.state, notepad: text };
@@ -45,13 +39,8 @@ class UIStore {
   /** Applies the theme class to the document */
   applyTheme(): void {
     const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-
-    if (this.state.theme === 'system') {
-      // Let CSS @media handle it
-    } else {
-      root.classList.add(this.state.theme);
-    }
+    root.classList.remove('light');
+    root.classList.add('dark');
   }
 
   private persist(): void {

@@ -2,21 +2,10 @@
   import { mixer } from '@/lib/stores/mixer.svelte';
   import { ui } from '@/lib/stores/ui.svelte';
   import { remote } from '@/lib/stores/remote.svelte';
-  import { copyShareUrl } from '@/lib/utils/share';
-  import { fade, fly } from 'svelte/transition';
-  import { Sun, Moon, Monitor, TreePine } from 'lucide-svelte';
+  import { fade } from 'svelte/transition';
+  import { TreePine } from 'lucide-svelte';
   let activeCount = $derived(mixer.activeCount);
   let isPlaying = $derived(mixer.isPlaying);
-
-  async function handleShare() {
-    const success = await copyShareUrl(mixer.sounds);
-    if (success) {
-      ui.shareToastVisible = true;
-      setTimeout(() => {
-        ui.shareToastVisible = false;
-      }, 2000);
-    }
-  }
 </script>
 
 <header class="toolbar">
@@ -37,18 +26,6 @@
           <span class="active-count">{activeCount} sound{activeCount !== 1 ? 's' : ''}</span>
         </div>
         
-        <button
-          class="toolbar-btn share-btn"
-          onclick={handleShare}
-          aria-label="Share current mix"
-          in:fade={{ duration: 200 }}
-          title="Share Mix"
-        >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M13.5 6a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zM4.5 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zM13.5 16.5a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zM6.44 10.24l5.13 2.77M11.56 4.99L6.44 7.76" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-
         <button
           class="toolbar-btn stop-btn"
           onclick={() => mixer.stopAll()}
@@ -77,27 +54,6 @@
         </div>
       {/if}
 
-      <div class="theme-switcher">
-        <button
-          class="theme-btn"
-          class:active={ui.theme === 'light'}
-          onclick={() => ui.setTheme('light')}
-          aria-label="Light theme"
-        ><Sun size={14} /></button>
-        <button
-          class="theme-btn"
-          class:active={ui.theme === 'system'}
-          onclick={() => ui.setTheme('system')}
-          aria-label="System theme"
-        ><Monitor size={14} /></button>
-        <button
-          class="theme-btn"
-          class:active={ui.theme === 'dark'}
-          onclick={() => ui.setTheme('dark')}
-          aria-label="Dark theme"
-        ><Moon size={14} /></button>
-      </div>
-
       <button
         class="toolbar-btn tools-btn"
         class:active={ui.toolsOpen}
@@ -112,7 +68,6 @@
       </button>
     </div>
   </div>
-
 </header>
 
 {#if ui.shareToastVisible}

@@ -31,10 +31,10 @@ let activeOutputId = 'local'; // 'local' means everyone plays locally, otherwise
 wss.on('connection', (ws) => {
   // Generate a random ID for this client
   const id = Math.random().toString(36).substring(2, 9);
-  
+
   // Default name
   clients.set(id, { ws, name: `Device ${id}` });
-  
+
   console.log(`Client connected: ${id}`);
 
   // Send initial state to the new client
@@ -52,7 +52,7 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      
+
       switch (data.type) {
         case 'set_name':
           if (clients.has(id)) {
@@ -60,12 +60,12 @@ wss.on('connection', (ws) => {
             broadcast({ type: 'clients', clients: getClientsList() });
           }
           break;
-          
+
         case 'set_output':
           activeOutputId = data.outputId;
           broadcast({ type: 'output_changed', activeOutputId });
           break;
-          
+
         case 'sync_mixer':
           globalMixerState = data.state;
           // Broadcast the new state to everyone EXCEPT the sender
@@ -86,13 +86,13 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`Client disconnected: ${id}`);
     clients.delete(id);
-    
+
     // If the active output device disconnected, revert to local
     if (activeOutputId === id) {
       activeOutputId = 'local';
       broadcast({ type: 'output_changed', activeOutputId });
     }
-    
+
     broadcast({ type: 'clients', clients: getClientsList() });
   });
 });
