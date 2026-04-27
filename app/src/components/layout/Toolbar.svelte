@@ -4,9 +4,25 @@
   import { remote } from '@/lib/stores/remote.svelte';
   import { fade, fly } from 'svelte/transition';
   import { TreePine, Palette, Sparkles, Volume2 } from 'lucide-svelte';
+  import { Dropdown } from '../ui';
   import { type PaletteId } from '@/lib/stores/ui.svelte';
   let activeCount = $derived(mixer.activeCount);
   let isPlaying = $derived(mixer.isPlaying);
+
+  const paletteOptions = [
+    { value: 'amber', label: 'Amber Forest' },
+    { value: 'ocean', label: 'Deep Sea' },
+    { value: 'moss', label: 'Jungle Moss' },
+    { value: 'lunar', label: 'Lunar Gray' }
+  ];
+
+  const remoteOptions = $derived([
+    { value: 'local', label: 'Play Locally' },
+    ...remote.clients.map(c => ({ 
+      value: c.id, 
+      label: `${c.name} ${c.id === remote.myId ? '(This Device)' : ''}` 
+    }))
+  ]);
 </script>
 
 <header class="toolbar">
@@ -22,6 +38,19 @@
           <span class="indicator-icon"><Volume2 size={16} /></span>
           <span class="active-count">{activeCount} sound{activeCount !== 1 ? 's' : ''}</span>
         </div>
+
+        <div class="master-volume-control" in:fade={{ duration: 200 }}>
+          <input 
+            type="range" 
+            min="0" 
+            max="1" 
+            step="0.01" 
+            value={mixer.masterVolume}
+            oninput={(e) => mixer.setMasterVolume(parseFloat(e.currentTarget.value))}
+            aria-label="Master volume"
+            title="Master Volume"
+          />
+        </div>
         
         <button
           class="toolbar-btn stop-btn"
@@ -36,20 +65,12 @@
         </button>
       {/if}
 
-      <!-- Palette Switcher -->
-      <div class="palette-switcher">
-        <select 
-          class="remote-select" 
-          value={ui.palette} 
-          onchange={(e) => ui.setPalette(e.currentTarget.value as PaletteId)}
-          title="Change Color Palette"
-        >
-          <option value="amber">Amber Forest</option>
-          <option value="ocean">Deep Sea</option>
-          <option value="moss">Jungle Moss</option>
-          <option value="lunar">Lunar Gray</option>
-        </select>
-      </div>
+      <Dropdown 
+        options={paletteOptions} 
+        value={ui.palette} 
+        onchange={(val) => ui.setPalette(val as PaletteId)}
+        title="Change Color Palette"
+      />
 
       <!-- Zen Mode (Auto-Cycle) -->
       <button
@@ -63,18 +84,12 @@
       </button>
 
       {#if remote.connected && remote.clients.length > 0}
-        <div class="remote-selector">
-          <select 
-            class="remote-select" 
-            value={remote.activeOutputId} 
-            onchange={(e) => remote.setOutput(e.currentTarget.value)}
-          >
-            <option value="local">Play Locally</option>
-            {#each remote.clients as client}
-              <option value={client.id}>{client.name} {client.id === remote.myId ? '(This Device)' : ''}</option>
-            {/each}
-          </select>
-        </div>
+        <Dropdown 
+          options={remoteOptions} 
+          value={remote.activeOutputId} 
+          onchange={(val) => remote.setOutput(val)}
+          title="Change Output Device"
+        />
       {/if}
 
       <button
@@ -165,26 +180,38 @@
     white-space: nowrap;
   }
 
-  .remote-select {
-    appearance: none;
+  .master-volume-control {
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    height: 36px;
     background: var(--color-bg-card);
     border: 1px solid var(--color-border-subtle);
-    border-radius: 12px;
-    padding: 0.4rem 1rem;
-    font-size: 0.85rem;
-    color: var(--color-text-secondary);
-    font-family: var(--font-sans);
-    cursor: pointer;
+    border-radius: var(--radius-full);
+    width: 120px;
+  }
+
+  .master-volume-control input {
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    background: var(--color-border-subtle);
+    border-radius: 2px;
     outline: none;
   }
 
-  .remote-select:focus {
-    border-color: var(--color-accent);
+  .master-volume-control input::-webkit-slider-thumb {
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.1s ease;
   }
 
-  .remote-select option {
-    background-color: var(--color-bg-secondary);
-    color: var(--color-text-primary);
+  .master-volume-control input::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
   }
 
   .toolbar-btn {

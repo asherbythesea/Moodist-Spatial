@@ -95,6 +95,11 @@
       }
     }
   }
+
+  // Update master volume
+  $effect(() => {
+    audioEngine.setMasterVolume(mixer.masterVolume);
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />

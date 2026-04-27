@@ -26,6 +26,7 @@ function createInitialState(): MixerState {
 
 class MixerStore {
   sounds = $state<MixerState>(createInitialState());
+  masterVolume = $state<number>(load<number>('masterVolume', 1));
   
   get activeSounds(): [string, SoundState][] {
     return Object.entries(this.sounds).filter(([, s]) => s.active);
@@ -74,6 +75,11 @@ class MixerStore {
       this.sounds[id] = { ...this.sounds[id], active: false };
     }
     this.persist();
+  }
+
+  setMasterVolume(volume: number): void {
+    this.masterVolume = Math.max(0, Math.min(1, volume));
+    save('masterVolume', this.masterVolume);
   }
 
   /** Load a preset's sound state into the mixer */
