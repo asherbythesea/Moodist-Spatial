@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Color palette - rustic, natural, moody */
+  --color-bg-primary: #121110;
+  --color-bg-secondary: #1a1918;
+  --color-bg-card: transparent;
+  --color-bg-card-hover: transparent;
+  --color-bg-card-active: transparent;
+  --color-bg-elevated: #1e1d1c;
+  --color-bg-glass: transparent;
+  --color-bg-toolbar: #121110;
+
+  --color-text-primary: #f4f0e6;
+  --color-text-secondary: #e0dcd2;
+  --color-text-muted: #b8b4a8;
+
+  --color-accent: #f4f0e6;
+  --color-accent-soft: rgba(244, 240, 230, 0.1);
+  --color-accent-glow: rgba(244, 240, 230, 0.2);
+  --color-accent-hover: #ffffff;
+
+  --color-border: rgba(244, 240, 230, 0.2);
+  --color-border-subtle: rgba(244, 240, 230, 0.1);
+
+  /* Typography */
+  --font-sans: 'Lora', Georgia, 'Times New Roman', serif;
+
+  /* Radius */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-full: 50%;
+
+  /* Animations */
+  --ease-spring: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out-expo: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Light theme (disabled for this moody natural style, or just overridden) */
+.light {
+  --color-bg-primary: #f4f0e6;
+  --color-bg-secondary: #ebe5d7;
+  --color-bg-card: transparent;
+  --color-bg-card-hover: transparent;
+  --color-bg-card-active: transparent;
+  --color-bg-elevated: #ffffff;
+  --color-bg-glass: transparent;
+  --color-bg-toolbar: #f4f0e6;
+
+  --color-text-primary: #2a2928;
+  --color-text-secondary: #4a4846;
+  --color-text-muted: #6e6b68;
+
+  --color-border: rgba(42, 41, 40, 0.2);
+  --color-border-subtle: rgba(42, 41, 40, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not(.dark) {
+    --color-bg-primary: #f4f0e6;
+    --color-bg-secondary: #ebe5d7;
+    --color-text-primary: #2a2928;
+    --color-text-secondary: #4a4846;
+    --color-text-muted: #6e6b68;
+    --color-border: rgba(42, 41, 40, 0.2);
+    --color-border-subtle: rgba(42, 41, 40, 0.1);
+  }
+}
+
+/* Base resets */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--color-bg-primary);
+}
+
+#app {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Animated ambient background removed for natural look */
+.ambient-bg {
+  display: none;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(0.40 0.02 270 / 0.3);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.50 0.02 270 / 0.5);
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Pulse glow for active sounds */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 15px oklch(0.74 0.17 285 / 0.15),
+      0 4px 20px oklch(0 0 0 / 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 25px oklch(0.74 0.17 285 / 0.25),
+      0 4px 25px oklch(0 0 0 / 0.2);
+  }
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sound bar animation */
+@keyframes sound-bar {
+
+  0%,
+  100% {
+    height: 30%;
+  }
+
+  50% {
+    height: 100%;
+  }
+}
+
+/* Float animation */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Glassmorphism utility removed / hollowed out */
+.glass {
+  background: transparent;
+  border: none;
+}
