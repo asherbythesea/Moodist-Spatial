@@ -155,7 +155,7 @@
 
   .btn-primary {
     background: var(--color-accent);
-    color: white;
+    color: #121110;
   }
 
   .btn-primary:hover:not(:disabled) {

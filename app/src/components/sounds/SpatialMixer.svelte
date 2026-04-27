@@ -1,9 +1,10 @@
 <script lang="ts">
   import { categories, soundMap, allSoundIds } from '@/data/sounds';
   import { mixer } from '@/lib/stores/mixer.svelte';
-  import { User } from 'lucide-svelte';
+  import { User, RotateCcw } from 'lucide-svelte';
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { load, save } from '@/lib/utils/storage';
 
   const ACTIVE_RADIUS = 300;
   const INACTIVE_RADIUS_MIN = 380;
@@ -11,7 +12,7 @@
   const LABEL_RADIUS = 500; // where the category labels orbit
 
   // Store base angles for each sound so they stay relative to the orbit
-  let soundAngles = $state<Record<string, number>>({});
+  let soundAngles = $state<Record<string, number>>(load('mixer_angles', {}));
   let categoryBaseAngles = $state<Record<string, number>>({});
   
   // Track dragging state
@@ -26,31 +27,39 @@
   let orbitAngle = $state(0);
   let animationFrame: number;
 
-  onMount(() => {
-    // Group sounds by category slices
+  function resetPositions() {
     const initialAngles: Record<string, number> = {};
-    const catAngles: Record<string, number> = {};
-    
     const slicePerCategory = (Math.PI * 2) / categories.length;
     
     categories.forEach((cat, i) => {
       const catStartAngle = i * slicePerCategory;
-      catAngles[cat.id] = catStartAngle + (slicePerCategory / 2);
-      
       const soundsInCat = cat.sounds.length;
-      // leave 15% padding on each side of the slice for visual separation
       const startCatSound = catStartAngle + (slicePerCategory * 0.15);
       const endCatSound = catStartAngle + (slicePerCategory * 0.85);
       
       cat.sounds.forEach((sound, j) => {
         const t = soundsInCat > 1 ? j / (soundsInCat - 1) : 0.5;
-        // Optional: add a slight scatter to the angle so it's not a perfect line
         const scatter = (Math.random() - 0.5) * 0.05;
         initialAngles[sound.id] = startCatSound + t * (endCatSound - startCatSound) + scatter;
       });
     });
     
     soundAngles = initialAngles;
+    save('mixer_angles', soundAngles);
+  }
+
+  onMount(() => {
+    // Only calculate if we don't have saved angles
+    if (Object.keys(soundAngles).length === 0) {
+      resetPositions();
+    }
+
+    // Set category labels
+    const catAngles: Record<string, number> = {};
+    const slicePerCategory = (Math.PI * 2) / categories.length;
+    categories.forEach((cat, i) => {
+      catAngles[cat.id] = (i * slicePerCategory) + (slicePerCategory / 2);
+    });
     categoryBaseAngles = catAngles;
 
     function updateCenter() {
@@ -148,6 +157,7 @@
       const dropAngle = Math.atan2(dy, dx);
       // Save relative angle so it continues orbiting from where it was dropped
       soundAngles[id] = dropAngle - orbitAngle;
+      save('mixer_angles', soundAngles);
       
       draggingId = null;
       window.removeEventListener('pointermove', handlePointerMove);
@@ -166,11 +176,16 @@
     style="width: {ACTIVE_RADIUS * 2}px; height: {ACTIVE_RADIUS * 2}px; left: {cx}px; top: {cy}px;"
   ></div>
 
-  <!-- Center Listener Orb -->
-  <div class="center-orb" style="left: {cx}px; top: {cy}px;">
+  <!-- Center Listener Orb (Click to Reset) -->
+  <button 
+    class="center-orb" 
+    style="left: {cx}px; top: {cy}px;"
+    onclick={resetPositions}
+    title="Reset Positions"
+  >
     <div class="center-glow" class:pulsing={mixer.isPlaying}></div>
     <span class="center-icon"><User size={28} /></span>
-  </div>
+  </button>
 
   <!-- Category Orbit Labels -->
   {#if cx > 0}
@@ -287,7 +302,14 @@
     background: var(--color-bg-elevated);
     border: 1px solid var(--color-border);
     z-index: 10;
-    pointer-events: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .center-orb:hover {
+    transform: translate(-50%, -50%) scale(1.05);
+    border-color: var(--color-accent);
+    background: var(--color-bg-secondary);
   }
 
   .center-icon {
@@ -328,11 +350,9 @@
     border: none;
     cursor: grab;
     z-index: 5;
-    transition: transform 0.1s linear, filter 0.3s ease;
-  }
-
-  .sound-node:not(.dragging) {
-    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.3s ease;
+    /* No transform transition because it's handled by requestAnimationFrame */
+    transition: filter 0.3s ease, opacity 0.3s ease;
+    will-change: transform;
   }
 
   .sound-node.dragging {
