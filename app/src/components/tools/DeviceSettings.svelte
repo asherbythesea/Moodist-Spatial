@@ -34,8 +34,10 @@
 
   <div class="device-card">
     <div class="device-visual">
-       {@const Icon = getIcon()}
-       <Icon size={32} strokeWidth={1.5} />
+       {#if true}
+         {@const Icon = getIcon()}
+         <Icon size={32} strokeWidth={1.5} />
+       {/if}
     </div>
     <div class="device-info">
       <label for="device-name">Device Name</label>
