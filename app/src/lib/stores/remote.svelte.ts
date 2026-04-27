@@ -38,8 +38,9 @@ class RemoteStore {
   connect() {
     // Determine WS URL based on current protocol/host
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // If dev server (vite), fallback to standard port or assume same port for prod
-    const host = window.location.port === '5173' ? `${window.location.hostname}:3001` : window.location.host;
+    // If dev server (vite usually 5173, 5174, etc.), fallback to port 3001 for the relay
+    const isDev = window.location.port.startsWith('51');
+    const host = isDev ? `${window.location.hostname}:3001` : window.location.host;
     const wsUrl = `${protocol}//${host}`;
 
     this.ws = new WebSocket(wsUrl);

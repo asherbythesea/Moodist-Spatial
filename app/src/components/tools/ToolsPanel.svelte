@@ -47,6 +47,8 @@
         <SleepTimer />
       {:else if ui.activeToolTab === 'notepad'}
         <Notepad />
+      {:else if ui.activeToolTab === 'device'}
+        <DeviceSettings />
       {/if}
     </div>
   </aside>
