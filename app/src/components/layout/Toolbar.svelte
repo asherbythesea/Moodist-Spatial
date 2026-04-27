@@ -229,6 +229,11 @@
     border-color: var(--color-accent);
   }
 
+  .remote-select option {
+    background-color: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+  }
+
   .theme-btn {
     width: 28px;
     height: 28px;

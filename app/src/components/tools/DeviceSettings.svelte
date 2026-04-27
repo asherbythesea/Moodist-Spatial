@@ -4,6 +4,11 @@
   
   let newName = $state(remote.myName);
   
+  // Keep newName in sync if remote.myName changes from another source
+  $effect(() => {
+    newName = remote.myName;
+  });
+
   function handleUpdate() {
     if (newName.trim()) {
       remote.setName(newName.trim());
@@ -15,8 +20,6 @@
     if (remote.myName.includes('Mac') || remote.myName.includes('Windows')) return Laptop;
     return Monitor;
   }
-  
-  const DeviceIcon = $derived(getIcon());
 </script>
 
 <div class="device-settings">
@@ -31,7 +34,8 @@
 
   <div class="device-card">
     <div class="device-visual">
-       <DeviceIcon size={32} strokeWidth={1.5} />
+       {@const Icon = getIcon()}
+       <Icon size={32} strokeWidth={1.5} />
     </div>
     <div class="device-info">
       <label for="device-name">Device Name</label>
