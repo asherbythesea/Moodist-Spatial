@@ -11,10 +11,10 @@
   import ToolsPanel from './components/tools/ToolsPanel.svelte';
   import Visualizer from './components/layout/Visualizer.svelte';
 
-  // Apply theme on mount
-  ui.applyTheme();
-
   onMount(() => {
+    // Apply theme on mount
+    ui.applyTheme();
+
     // Initialize Web Audio Engine
     audioEngine;
     

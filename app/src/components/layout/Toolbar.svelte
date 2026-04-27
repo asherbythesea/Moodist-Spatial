@@ -3,7 +3,8 @@
   import { ui } from '@/lib/stores/ui.svelte';
   import { remote } from '@/lib/stores/remote.svelte';
   import { fade } from 'svelte/transition';
-  import { TreePine } from 'lucide-svelte';
+  import { TreePine, Palette, Sparkles, Volume2 } from 'lucide-svelte';
+  import { type PaletteId } from '@/lib/stores/ui.svelte';
   let activeCount = $derived(mixer.activeCount);
   let isPlaying = $derived(mixer.isPlaying);
 </script>
@@ -18,11 +19,7 @@
     <div class="toolbar-actions">
       {#if isPlaying}
         <div class="active-indicator" in:fade={{ duration: 200 }}>
-          <div class="sound-bars">
-            <span class="bar"></span>
-            <span class="bar"></span>
-            <span class="bar"></span>
-          </div>
+          <span class="indicator-icon"><Volume2 size={16} /></span>
           <span class="active-count">{activeCount} sound{activeCount !== 1 ? 's' : ''}</span>
         </div>
         
@@ -38,6 +35,32 @@
           </svg>
         </button>
       {/if}
+
+      <!-- Palette Switcher -->
+      <div class="palette-switcher">
+        <select 
+          class="remote-select" 
+          value={ui.palette} 
+          onchange={(e) => ui.setPalette(e.currentTarget.value as PaletteId)}
+          title="Change Color Palette"
+        >
+          <option value="amber">Amber Forest</option>
+          <option value="ocean">Deep Sea</option>
+          <option value="moss">Jungle Moss</option>
+          <option value="lunar">Lunar Gray</option>
+        </select>
+      </div>
+
+      <!-- Zen Mode (Auto-Cycle) -->
+      <button
+        class="toolbar-btn zen-btn"
+        class:active={ui.autoCycle}
+        onclick={() => ui.toggleAutoCycle()}
+        aria-label="Toggle Zen Mode"
+        title="Zen Mode (Auto-Cycle Colors)"
+      >
+        <Sparkles size={18} />
+      </button>
 
       {#if remote.connected && remote.clients.length > 0}
         <div class="remote-selector">
@@ -125,43 +148,21 @@
     gap: 0.5rem;
     padding: 0.4rem 0.8rem;
     background: var(--color-accent-soft);
-    border-radius: var(--radius-full);
+    border-radius: var(--radius-md);
     border: 1px solid var(--color-accent-soft);
   }
 
-  .sound-bars {
+  .indicator-icon {
     display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 14px;
+    align-items: center;
+    color: var(--color-accent);
   }
-
-  .bar {
-    width: 3px;
-    background: var(--color-accent);
-    border-radius: 1px;
-    animation: sound-bar 0.8s ease-in-out infinite alternate;
-  }
-
-  .bar:nth-child(1) { height: 40%; animation-delay: 0s; }
-  .bar:nth-child(2) { height: 80%; animation-delay: 0.2s; }
-  .bar:nth-child(3) { height: 60%; animation-delay: 0.4s; }
 
   .active-count {
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--color-accent);
     white-space: nowrap;
-  }
-
-  .theme-switcher {
-    display: flex;
-    gap: 0.25rem;
-    background: var(--color-bg-card);
-    padding: 0.25rem;
-    border-radius: 12px;
-    border: 1px solid var(--color-border-subtle);
-    margin: 0 0.5rem;
   }
 
   .remote-select {
@@ -184,31 +185,6 @@
   .remote-select option {
     background-color: var(--color-bg-secondary);
     color: var(--color-text-primary);
-  }
-
-  .theme-btn {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    background: transparent;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    opacity: 0.5;
-  }
-
-  .theme-btn:hover {
-    opacity: 0.8;
-  }
-
-  .theme-btn.active {
-    background: var(--color-bg-elevated);
-    opacity: 1;
-    box-shadow: 0 1px 3px oklch(0 0 0 / 0.1);
   }
 
   .toolbar-btn {
@@ -268,9 +244,6 @@
     .toolbar-actions {
       width: 100%;
       justify-content: space-between;
-    }
-    .theme-switcher {
-      margin: 0;
     }
   }
 </style>

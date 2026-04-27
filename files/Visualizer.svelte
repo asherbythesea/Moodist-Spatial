@@ -2,29 +2,19 @@
   import { mixer } from '@/lib/stores/mixer.svelte';
   import { audioEngine } from '@/lib/audio/AudioEngine';
   import type { FrequencyBands } from '@/lib/audio/AudioEngine';
-  import { ui, type PaletteId } from '@/lib/stores/ui.svelte';
   import { onMount } from 'svelte';
 
   let isPlaying = $derived(mixer.isPlaying);
   let canvas: HTMLCanvasElement;
 
-  // Hue configuration for each palette
-  const paletteConfig: Record<PaletteId, { orb: number, fly: number }> = {
-    amber: { orb: 35,  fly: 42 },
-    ocean: { orb: 195, fly: 185 },
-    moss:  { orb: 85,  fly: 75 },
-    lunar: { orb: 210, fly: 200 }
-  };
-
-  // Current shared target hues that particles lerp toward
-  let targetOrbHue = $state(paletteConfig[ui.palette].orb);
-  let targetFlyHue = $state(paletteConfig[ui.palette].fly);
-
-  // Smoothed band values
+  // Smoothed band values — updated each frame by lerping toward raw FFT output.
+  // Using separate lerp rates per band to match the perceptual "speed" of each
+  // frequency range: bass should feel slow and weighty; treble should snap.
   let bassSmoothed  = $state(0);
   let midSmoothed   = $state(0);
   let trebleSmoothed = $state(0);
 
+  // Expose a scalar for the CSS orb layer (driven by bass only)
   let orbAmplitude = $state(0);
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -66,7 +56,6 @@
     opacity: number;
     hue: number;
     flickerPhase: number;  // per-particle flicker offset
-    baseFlickerRate: number; // unique base speed
   }
 
   type Particle = LargeOrb | SmallFirefly;
@@ -86,7 +75,7 @@
       speedX: (Math.random() - 0.5) * 0.25,
       speedY: (Math.random() - 0.5) * 0.25,
       opacity: 0.08 + Math.random() * 0.12,
-      hue: targetOrbHue,
+      hue: 28 + Math.random() * 20,         // amber 28–48°
       phaseOffset: Math.random() * Math.PI * 2,
     });
 
@@ -100,9 +89,8 @@
       zipVX: 0,
       zipVY: 0,
       opacity: 0.2 + Math.random() * 0.5,
-      hue: targetFlyHue,
+      hue: 35 + Math.random() * 15,
       flickerPhase: Math.random() * Math.PI * 2,
-      baseFlickerRate: 1 + Math.random() * 4, // unique base speed
     });
 
     const createParticles = (w: number, h: number) => {
@@ -119,55 +107,48 @@
     window.addEventListener('resize', resize);
     resize();
 
-    // ── Auto-Cycle Timer ──────────────────────────────────────────────────
-    let lastCycleTime = Date.now();
-    const CYCLE_INTERVAL = 60000; // 1 minute per palette
-    const palettes: PaletteId[] = ['amber', 'ocean', 'moss', 'lunar'];
-
     // ── Treble transient detection ─────────────────────────────────────────
+    // We want fireflies to "zip" when a sudden high-frequency spike arrives
+    // (a bird call, a raindrop burst). A simple approach: track the previous
+    // treble value and, if the delta exceeds a threshold, fire an impulse.
     let prevTreble = 0;
-    const TREBLE_TRANSIENT_THRESHOLD = 0.08; 
-    const ZIP_STRENGTH = 1.8;
+    const TREBLE_TRANSIENT_THRESHOLD = 0.06;
+    const ZIP_STRENGTH = 2.5; // pixels per frame impulse magnitude
 
+    // ── Animation frame counter for phase-based flicker ───────────────────
     let t = 0;
+
+    // ── Idle drift amplitude (keeps things alive when audio is silent) ─────
     const IDLE_AMPLITUDE = 0.03;
 
     let frame: number;
     const loop = () => {
-      t += 0.016;
+      t += 0.016; // ~60fps tick, used as a time parameter
 
-      // Handle Auto-Cycle
-      if (ui.autoCycle && Date.now() - lastCycleTime > CYCLE_INTERVAL) {
-        const currentIndex = palettes.indexOf(ui.palette);
-        const nextIndex = (currentIndex + 1) % palettes.length;
-        ui.setPalette(palettes[nextIndex]);
-        lastCycleTime = Date.now();
-      }
-
-      // Update target hues from UI store
-      targetOrbHue = paletteConfig[ui.palette].orb;
-      targetFlyHue = paletteConfig[ui.palette].fly;
-
+      // ── Band sampling & smoothing ────────────────────────────────────────
+      // Each band gets its own lerp alpha to simulate the physical "weight"
+      // of that frequency range:
+      //   bass   — slow alpha (0.04): feels heavy, like a subwoofer pumping
+      //   mid    — medium (0.08)
+      //   treble — fast alpha (0.18): snappy, like a shutter clicking open
       if (mixer.isPlaying) {
         const bands: FrequencyBands = audioEngine.getBands();
         bassSmoothed   = bassSmoothed   + (bands.bass   - bassSmoothed)   * 0.04;
-        midSmoothed    = midSmoothed    + (bands.mid    - midSmoothed)    * 0.06;
-        // Treble lerp slowed down from 0.18 to 0.1 for a smoother curve
-        trebleSmoothed = trebleSmoothed + (bands.treble - trebleSmoothed) * 0.1;
+        midSmoothed    = midSmoothed    + (bands.mid    - midSmoothed)    * 0.08;
+        trebleSmoothed = trebleSmoothed + (bands.treble - trebleSmoothed) * 0.18;
       } else {
+        // Gentle idle decay so particles don't freeze
         bassSmoothed   = bassSmoothed   * 0.97 + IDLE_AMPLITUDE * 0.03;
         midSmoothed    = midSmoothed    * 0.97;
         trebleSmoothed = trebleSmoothed * 0.97;
       }
 
-      // Apply a power curve (x^1.8) to treble. This makes it ignore the low-level
-      // jitter and only react strongly to clear high-frequency peaks.
-      const trebleCurved = Math.pow(trebleSmoothed, 1.8);
       orbAmplitude = bassSmoothed;
 
-      const trebleDelta = trebleCurved - prevTreble;
+      // Detect treble transients for zip impulse
+      const trebleDelta = trebleSmoothed - prevTreble;
       const hasTransient = trebleDelta > TREBLE_TRANSIENT_THRESHOLD;
-      prevTreble = trebleCurved;
+      prevTreble = trebleSmoothed;
 
       // ── Clear ────────────────────────────────────────────────────────────
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -175,11 +156,11 @@
       const W = canvas.width;
       const H = canvas.height;
 
-      // ── Draw large orbs ─────────────────────────────────────
+      // ── Draw large orbs (bass-driven) ─────────────────────────────────────
+      // The orb radius grows proportionally to bass energy. We use the per-orb
+      // phaseOffset to make them breathe slightly out of phase with each other.
       for (const orb of orbs) {
-        // Smoothly lerp hue towards target - slowed to 0.002
-        orb.hue += (targetOrbHue - orb.hue) * 0.002;
-
+        // Drift
         orb.x += orb.speedX * (1 + bassSmoothed * 1.2);
         orb.y += orb.speedY * (1 + bassSmoothed * 1.2);
 
@@ -188,14 +169,15 @@
         if (orb.y < -orb.baseSize * 2) orb.y = H + orb.baseSize;
         if (orb.y > H + orb.baseSize)  orb.y = -orb.baseSize * 2;
 
+        // Bass swell: radius oscillates with a slow sinusoidal phase offset
+        // so the visual expansion feels organic rather than mechanical.
         const swell = 1 + bassSmoothed * 1.8 + Math.sin(t * 0.4 + orb.phaseOffset) * 0.08;
         const radius = orb.baseSize * swell;
         const alpha  = orb.opacity * (0.5 + bassSmoothed * 1.5);
 
         const g = ctx.createRadialGradient(orb.x, orb.y, 0, orb.x, orb.y, radius);
-        const sat = ui.palette === 'lunar' ? '10%' : '70%';
-        g.addColorStop(0,   `hsla(${orb.hue}, ${sat}, 55%, ${Math.min(alpha, 0.45)})`);
-        g.addColorStop(0.4, `hsla(${orb.hue}, ${sat}, 40%, ${alpha * 0.3})`);
+        g.addColorStop(0,   `hsla(${orb.hue}, 70%, 55%, ${Math.min(alpha, 0.45)})`);
+        g.addColorStop(0.4, `hsla(${orb.hue}, 60%, 40%, ${alpha * 0.3})`);
         g.addColorStop(1,   'transparent');
 
         ctx.fillStyle = g;
@@ -204,21 +186,21 @@
         ctx.fill();
       }
 
-      // ── Draw small fireflies ──────────────────────────────
+      // ── Draw small fireflies (treble-driven) ──────────────────────────────
       for (const fly of fireflies) {
-        // Smoothly lerp hue towards target - slowed to 0.002
-        fly.hue += (targetFlyHue - fly.hue) * 0.002;
-
+        // Apply zip impulse on transient
         if (hasTransient) {
           const angle = Math.random() * Math.PI * 2;
-          fly.zipVX += Math.cos(angle) * ZIP_STRENGTH * trebleDelta * 15;
-          fly.zipVY += Math.sin(angle) * ZIP_STRENGTH * trebleDelta * 15;
+          fly.zipVX += Math.cos(angle) * ZIP_STRENGTH * trebleDelta * 20;
+          fly.zipVY += Math.sin(angle) * ZIP_STRENGTH * trebleDelta * 20;
         }
 
+        // Decay zip velocity (friction coefficient 0.88 — tunable)
         fly.zipVX *= 0.88;
         fly.zipVY *= 0.88;
 
-        const speedScale = 1 + trebleCurved * 3;
+        // Base speed multiplied by treble energy + zip
+        const speedScale = 1 + trebleSmoothed * 4;
         fly.x += fly.speedX * speedScale + fly.zipVX;
         fly.y += fly.speedY * speedScale + fly.zipVY;
 
@@ -227,19 +209,20 @@
         if (fly.y < 0)  fly.y = H;
         if (fly.y > H)  fly.y = 0;
 
-        // Desynced Flicker: using baseFlickerRate + curved response
-        const flickerRate = fly.baseFlickerRate + trebleCurved * 8; 
+        // Treble flicker: opacity oscillates rapidly at high frequencies.
+        // The flickerPhase offset ensures each firefly blinks independently.
+        const flickerRate = 3 + trebleSmoothed * 12; // Hz equivalent
         const flicker = 0.5 + 0.5 * Math.sin(t * flickerRate + fly.flickerPhase);
-        const alpha   = fly.opacity * (0.2 + trebleCurved * 0.8) * flicker;
+        const alpha   = fly.opacity * (0.2 + trebleSmoothed * 0.8) * flicker;
 
-        const radius = fly.size * (1 + trebleCurved * 0.5);
+        // Scale core dot slightly with treble
+        const radius = fly.size * (1 + trebleSmoothed * 0.6);
 
-        const flySat = ui.palette === 'lunar' ? '5%' : '85%';
-
+        // Draw halo glow only for larger fireflies (performance guard)
         if (fly.size > 1.0) {
-          const haloRadius = radius * 7 * (1 + trebleCurved * 0.5);
+          const haloRadius = radius * 7 * (1 + trebleSmoothed * 0.5);
           const hg = ctx.createRadialGradient(fly.x, fly.y, 0, fly.x, fly.y, haloRadius);
-          hg.addColorStop(0, `hsla(${fly.hue}, ${flySat}, 75%, ${alpha * 0.5})`);
+          hg.addColorStop(0, `hsla(${fly.hue}, 85%, 75%, ${alpha * 0.5})`);
           hg.addColorStop(1, 'transparent');
           ctx.fillStyle = hg;
           ctx.beginPath();
@@ -247,9 +230,10 @@
           ctx.fill();
         }
 
+        // Draw bright core
         ctx.beginPath();
         ctx.arc(fly.x, fly.y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${fly.hue}, ${flySat}, 92%, ${Math.min(alpha * 1.4, 1)})`;
+        ctx.fillStyle = `hsla(${fly.hue}, 85%, 92%, ${Math.min(alpha * 1.4, 1)})`;
         ctx.fill();
       }
 
@@ -281,6 +265,7 @@
     <div class="orb orb-3"></div>
   </div>
 
+  <div class="glow-field"></div>
   <div class="noise-overlay"></div>
 </div>
 
@@ -292,21 +277,12 @@
     z-index: 0;
     overflow: hidden;
     opacity: 0.15;
-    transition: opacity 3s ease-in-out, background-color 2s ease;
-    background: var(--color-bg-primary);
+    transition: opacity 3s ease-in-out;
+    background: #121110;
   }
 
   .visualizer.active {
     opacity: 1;
-  }
-
-  .visualizer::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at center, transparent 20%, var(--color-bg-primary) 100%);
-    z-index: 3;
-    pointer-events: none;
   }
 
   .particle-canvas {
@@ -318,6 +294,7 @@
   .orb-layer {
     position: absolute;
     inset: 0;
+    /* Transition here is intentionally short — JS is driving this reactively */
     transition: transform 0.12s linear, opacity 0.12s linear;
   }
 
@@ -331,8 +308,8 @@
   .orb-1 {
     width: 80vw;
     height: 80vw;
-    background: var(--color-accent-soft);
-    filter: blur(80px); /* Reduced blur to prevent banding */
+    background: rgba(212, 138, 66, 0.1);
+    filter: blur(120px);
     top: -20%;
     left: -10%;
     animation-delay: 0s;
@@ -341,8 +318,8 @@
   .orb-2 {
     width: 70vw;
     height: 70vw;
-    background: var(--color-accent-glow);
-    filter: blur(100px);
+    background: rgba(138, 74, 43, 0.12);
+    filter: blur(140px);
     bottom: -15%;
     right: -10%;
     animation-delay: -7s;
@@ -352,23 +329,31 @@
   .orb-3 {
     width: 60vw;
     height: 60vw;
-    background: var(--color-accent-soft);
-    filter: blur(70px);
+    background: rgba(82, 59, 44, 0.15);
+    filter: blur(100px);
     top: 20%;
     left: 20%;
     animation-delay: -12s;
     animation-duration: 30s;
   }
 
+  .glow-field {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 0%, #121110 100%);
+    pointer-events: none;
+  }
+
   .noise-overlay {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 4;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-size: 128px 128px;
-    opacity: 0.08;
-    mix-blend-mode: soft-light;
+    z-index: 2;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+    filter: contrast(120%) brightness(100%);
   }
 
   @keyframes float {

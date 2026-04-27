@@ -15,6 +15,9 @@
   let soundAngles = $state<Record<string, number>>(load('mixer_angles', {}));
   let categoryBaseAngles = $state<Record<string, number>>({});
   
+  // Physics state for each node to enable spring motion
+  let nodeStates = $state<Record<string, { x: number, y: number, vx: number, vy: number }>>({});
+  
   // Track dragging state
   let draggingId = $state<string | null>(null);
   let dragX = $state(0);
@@ -49,12 +52,17 @@
   }
 
   onMount(() => {
-    // Only calculate if we don't have saved angles
+    // Initialize node physics states
+    const initialStates: Record<string, any> = {};
+    allSoundIds.forEach(id => {
+      initialStates[id] = { x: cx, y: cy, vx: 0, vy: 0 };
+    });
+    nodeStates = initialStates;
+
     if (Object.keys(soundAngles).length === 0) {
       resetPositions();
     }
 
-    // Set category labels
     const catAngles: Record<string, number> = {};
     const slicePerCategory = (Math.PI * 2) / categories.length;
     categories.forEach((cat, i) => {
@@ -73,9 +81,55 @@
     updateCenter();
     window.addEventListener('resize', updateCenter);
 
-    // Orbit animation loop
+    // Orbit + Physics animation loop
+    const SPRING_STIFFNESS = 0.04; // Slower, warmer pull
+    const SPRING_DAMPING = 0.75;   // Higher friction to prevent jiggling
+
     function animate() {
-      orbitAngle += 0.0003; // Very slow, relaxing orbit speed
+      orbitAngle += 0.0003; 
+
+      // Update physics for each node
+      for (const id of allSoundIds) {
+        if (!nodeStates[id]) continue;
+
+        // Calculate Target Position
+        const state = mixer.sounds[id];
+        const isActive = state?.active ?? false;
+        const volume = state?.volume ?? 0;
+        const angle = (soundAngles[id] ?? 0) + orbitAngle;
+
+        let targetDist;
+        if (isActive) {
+          targetDist = (1 - volume) * ACTIVE_RADIUS;
+        } else {
+          const hash = id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+          targetDist = INACTIVE_RADIUS_MIN + (hash % (INACTIVE_RADIUS_MAX - INACTIVE_RADIUS_MIN));
+        }
+
+        const tx = cx + Math.cos(angle) * targetDist;
+        const ty = cy + Math.sin(angle) * targetDist;
+
+        if (draggingId === id) {
+          // While dragging, follow pointer directly but keep velocity updated
+          const dx = dragX - nodeStates[id].x;
+          const dy = dragY - nodeStates[id].y;
+          nodeStates[id].vx = dx;
+          nodeStates[id].vy = dy;
+          nodeStates[id].x = dragX;
+          nodeStates[id].y = dragY;
+        } else {
+          // Apply Spring Physics
+          const ax = (tx - nodeStates[id].x) * SPRING_STIFFNESS;
+          const ay = (ty - nodeStates[id].y) * SPRING_STIFFNESS;
+
+          nodeStates[id].vx = (nodeStates[id].vx + ax) * SPRING_DAMPING;
+          nodeStates[id].vy = (nodeStates[id].vy + ay) * SPRING_DAMPING;
+
+          nodeStates[id].x += nodeStates[id].vx;
+          nodeStates[id].y += nodeStates[id].vy;
+        }
+      }
+
       animationFrame = requestAnimationFrame(animate);
     }
     animate();
@@ -86,29 +140,11 @@
     };
   });
 
-  // Calculate position for a sound
+  // Now simply return the physics-calculated position
   function getPosition(id: string) {
-    if (draggingId === id) {
-      return { x: dragX, y: dragY };
-    }
-
-    const state = mixer.sounds[id];
-    const isActive = state?.active ?? false;
-    const volume = state?.volume ?? 0;
-    const angle = (soundAngles[id] ?? 0) + orbitAngle;
-
-    let distance;
-    if (isActive) {
-      distance = (1 - volume) * ACTIVE_RADIUS;
-    } else {
-      const hash = id.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-      distance = INACTIVE_RADIUS_MIN + (hash % (INACTIVE_RADIUS_MAX - INACTIVE_RADIUS_MIN));
-    }
-
-    return {
-      x: cx + Math.cos(angle) * distance,
-      y: cy + Math.sin(angle) * distance
-    };
+    const state = nodeStates[id];
+    if (!state) return { x: cx, y: cy };
+    return { x: state.x, y: state.y };
   }
 
   function getCategoryPosition(id: string) {
@@ -408,13 +444,27 @@
   .connection-line {
     position: absolute;
     height: 1px;
-    background: linear-gradient(90deg, var(--color-accent-glow) 0%, transparent 100%);
+    /* Dashed line using repeating gradient */
+    background-image: linear-gradient(90deg, var(--color-accent) 50%, transparent 50%);
+    background-size: 10px 100%;
+    
+    /* Fade out as it gets closer to center */
+    mask-image: linear-gradient(90deg, black 0%, transparent 100%);
+    
     top: 50%;
     left: 50%;
     transform-origin: left center;
     pointer-events: none;
     z-index: -1;
-    opacity: 0.4;
+    opacity: 0.6;
+    
+    /* "Streaming" animation - slowed down to 25% */
+    animation: connection-flow 80s linear infinite;
+  }
+
+  @keyframes connection-flow {
+    from { background-position: 0 0; }
+    to { background-position: 1000px 0; }
   }
 
   .volume-ring {
