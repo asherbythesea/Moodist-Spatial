@@ -29,5 +29,17 @@ docker-compose up -d
 
 The application will be available at `http://localhost:3001`.
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third-Party Assets
+
+Some sounds used in this project are sourced from third-party providers and are subject to different licenses:
+
+- Sounds licensed under the [Pixabay Content License](https://pixabay.com/service/license-summary/)
+- Sounds licensed under [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
+
 ---
 Created with Antigravity.
+
