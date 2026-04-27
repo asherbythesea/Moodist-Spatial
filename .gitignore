@@ -7,6 +7,7 @@ dist/
 **/dist/
 .svelte-kit/
 build/
+build.ps1
 
 # Local env files
 .env
