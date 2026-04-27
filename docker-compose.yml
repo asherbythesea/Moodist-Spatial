@@ -1,9 +1,9 @@
 version: '3.3'
 services:
   moodist:
-    image: ghcr.io/asherbythesea/moodist-spatial:latest
+    image: moodist:latest
     build: .
-    container_name: moodist-server
+    container_name: moodist
     ports:
       - "3001:3001"
     environment:
