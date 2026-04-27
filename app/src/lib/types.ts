@@ -30,6 +30,8 @@ export interface Preset {
 
 export interface UIState {
   theme: 'light' | 'dark' | 'system';
+  palette: string;
+  autoCycle: boolean;
   notepad: string;
   sidebarOpen: boolean;
   activeCategory: string | null;

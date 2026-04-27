@@ -226,7 +226,7 @@ class AudioEngine {
       return { bass: 0, mid: 0, treble: 0 };
     }
 
-    this.analyser.getByteFrequencyData(this.dataArray);
+    this.analyser.getByteFrequencyData(this.dataArray as any);
 
     return {
       bass:   averageBins(this.dataArray, BASS_START,   BASS_END),

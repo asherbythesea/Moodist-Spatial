@@ -10,8 +10,12 @@
   import SpatialMixer from './components/sounds/SpatialMixer.svelte';
   import ToolsPanel from './components/tools/ToolsPanel.svelte';
   import Visualizer from './components/layout/Visualizer.svelte';
+  import { fade } from 'svelte/transition';
+
+  let mounted = $state(false);
 
   onMount(() => {
+    mounted = true;
     // Apply theme on mount
     ui.applyTheme();
 
@@ -95,16 +99,20 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<Visualizer />
+{#if mounted}
+  <div in:fade={{ duration: 1500 }}>
+    <Visualizer />
 
-<div class="app-layout">
-  <main class="main-content">
-    <Toolbar />
-    <SpatialMixer />
-  </main>
+    <div class="app-layout">
+      <main class="main-content">
+        <Toolbar />
+        <SpatialMixer />
+      </main>
 
-  <ToolsPanel />
-</div>
+      <ToolsPanel />
+    </div>
+  </div>
+{/if}
 
 <style>
   .app-layout {

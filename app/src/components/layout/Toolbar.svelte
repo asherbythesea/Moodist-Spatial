@@ -2,7 +2,7 @@
   import { mixer } from '@/lib/stores/mixer.svelte';
   import { ui } from '@/lib/stores/ui.svelte';
   import { remote } from '@/lib/stores/remote.svelte';
-  import { fade } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import { TreePine, Palette, Sparkles, Volume2 } from 'lucide-svelte';
   import { type PaletteId } from '@/lib/stores/ui.svelte';
   let activeCount = $derived(mixer.activeCount);

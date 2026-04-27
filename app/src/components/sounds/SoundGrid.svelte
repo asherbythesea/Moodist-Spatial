@@ -40,7 +40,7 @@
     >
       <div class="category-header">
         <h2 class="category-title">
-          <span class="category-icon">{category.icon}</span>
+          <span class="category-icon"><category.icon size={28} /></span>
           {category.title}
         </h2>
         <div class="header-line"></div>

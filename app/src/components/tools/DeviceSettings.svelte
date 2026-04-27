@@ -18,6 +18,7 @@
     if (remote.myName.includes('Mac') || remote.myName.includes('Windows')) return Laptop;
     return Monitor;
   }
+  let Icon = $derived(getIcon());
 </script>
 
 <div class="device-settings">
@@ -32,10 +33,7 @@
 
   <div class="device-card">
     <div class="device-visual">
-       {#if true}
-         {@const Icon = getIcon()}
-         <Icon size={24} strokeWidth={1.5} />
-       {/if}
+       <Icon size={24} strokeWidth={1.5} />
     </div>
     <div class="device-info">
       <label for="device-name">Device Name</label>

@@ -2,7 +2,7 @@ import { load, save } from '@/lib/utils/storage';
 export type PaletteId = 'amber' | 'ocean' | 'moss' | 'lunar';
 
 interface UIState {
-  theme: 'dark' | 'light';
+  theme: 'dark' | 'light' | 'system';
   palette: PaletteId;
   autoCycle: boolean;
   notepad: string;
@@ -11,7 +11,7 @@ interface UIState {
 }
 
 const defaults: UIState = {
-  theme: 'dark',
+  theme: 'system',
   palette: 'amber',
   autoCycle: false,
   notepad: '',
@@ -25,12 +25,18 @@ class UIStore {
   activeToolTab = $state<'presets' | 'pomodoro' | 'sleep' | 'notepad' | 'device'>('presets');
   shareToastVisible = $state(false);
 
-  get theme() { return this.state.theme || 'dark'; }
+  get theme() { return this.state.theme || 'system'; }
   get palette(): PaletteId { return (this.state.palette || 'amber') as PaletteId; }
   get autoCycle() { return this.state.autoCycle || false; }
   get notepad() { return this.state.notepad; }
   get sidebarOpen() { return this.state.sidebarOpen; }
   get activeCategory() { return this.state.activeCategory; }
+
+  setTheme(theme: 'light' | 'dark' | 'system'): void {
+    this.state = { ...this.state, theme };
+    this.persist();
+    this.applyTheme();
+  }
 
   setPalette(id: PaletteId): void {
     this.state = { ...this.state, palette: id };
@@ -70,8 +76,17 @@ class UIStore {
 
   applyTheme(): void {
     const root = document.documentElement;
-    root.classList.remove('light');
-    root.classList.add('dark');
+    const theme = this.state.theme;
+    
+    root.classList.remove('light', 'dark');
+    
+    if (theme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.add(isDark ? 'dark' : 'light');
+    } else {
+      root.classList.add(theme);
+    }
+    
     this.applyPalette();
   }
 

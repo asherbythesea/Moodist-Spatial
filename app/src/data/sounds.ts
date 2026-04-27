@@ -1,5 +1,5 @@
 import type { CategoryDefinition } from '@/lib/types';
-import TextIcon from '@/components/ui/TextIcon.svelte';
+import { TextIcon } from '../components/ui';
 import { 
   Leaf, Waves, Flame, Wind, Tornado, Trees, Droplet, Snowflake, Mountain, MapPin,
   CloudRain, CloudLightning, Umbrella, Tent, CloudDrizzle,

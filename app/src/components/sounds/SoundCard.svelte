@@ -35,7 +35,7 @@
 >
   <div class="card-content">
     <div class="card-icon" class:active={isActive}>
-      <span class="emoji">{sound.icon}</span>
+      <span class="emoji"><sound.icon size={36} {...sound.iconProps} /></span>
     </div>
 
     <span class="card-label">{sound.label}</span>

@@ -47,7 +47,7 @@
             class:active={ui.activeCategory === category.id}
             onclick={() => handleCategoryClick(category.id)}
           >
-            <span class="cat-icon">{category.icon}</span>
+            <span class="cat-icon"><category.icon size={18} /></span>
             <span class="cat-name">{category.title}</span>
             <span class="cat-count">{category.sounds.length}</span>
           </button>

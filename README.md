@@ -21,7 +21,7 @@ Built with Svelte 5 (Runes) and Web Audio API.
 
 ## Deployment
 
-To run the application, simply use:
+To run the application, download the provided `docker-compose.yml` file and simply use:
 
 ```bash
 docker-compose up -d
@@ -41,5 +41,4 @@ Some sounds used in this project are sourced from third-party providers and are 
 - Sounds licensed under [CC0](https://creativecommons.org/publicdomain/zero/1.0/)
 
 ---
-Created with Antigravity.
-
+Created with the help of Google Antigravity.  
